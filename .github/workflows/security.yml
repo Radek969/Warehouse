@@ -1,10 +1,55 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿name: Security Scan
 
-namespace Warehouse.github.workdlows
-{
-    class security
-    {
-    }
-}
+on:
+  push:
+  pull_request:
+
+jobs:
+  security-scan:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore .\Warehouse.csproj
+
+      - name: Audyt pakietów NuGet
+        shell: pwsh
+        run: |
+          $out = dotnet list .\Warehouse.csproj package --vulnerable --include-transitive 2>&1
+          Write-Output $out
+
+          if ($out -match "vulnerable packages") {
+              Write-Error "Wykryto podatne pakiety!"
+              exit 1
+          }
+
+          Write-Output "Brak znanych podatności."
+
+      - name: Build z analizatorem
+        run: dotnet build .\Warehouse.csproj --configuration Release /p:TreatWarningsAsErrors=true
+
+      - name: Generuj SBOM
+        shell: pwsh
+        run: |
+          dotnet tool install --global Microsoft.Sbom.DotNetTool
+
+          sbom-tool generate `
+            -b .\bin\Release\net10.0 `
+            -bc . `
+            -pn Warehouse `
+            -pv 1.0.0 `
+            -ps "Student Developer"
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: '**/manifest.spdx.json'
