@@ -1,19 +1,62 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿name: Security Scan
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <GenerateSbom>true</GenerateSbom>
-  </PropertyGroup>
+on:
+  push:
+  pull_request:
 
-  <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.1.79" />
-    <PackageReference Include="MediatR" Version="14.2.0" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.11" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.11" />
-  </ItemGroup>
+jobs:
+  security-scan:
+    runs-on: windows-latest
 
-</Project>
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore .\Warehouse.csproj
+
+      - name: Audyt pakietów NuGet
+        shell: pwsh
+        run: |
+          $out = dotnet list .\Warehouse.csproj package --vulnerable --include-transitive 2>&1
+
+          Write-Output $out
+
+          if ($out -match "has no vulnerable packages") {
+              Write-Output "Brak znanych podatności."
+          }
+          elseif ($out -match "has the following vulnerable packages") {
+              Write-Error "Wykryto podatne pakiety!"
+              Write-Output $out
+              exit 1
+          }
+          else {
+              Write-Output "Nie udało się jednoznacznie określić wyniku audytu."
+              exit 1
+          }
+
+      - name: Build z analizatorem
+        run: dotnet build .\Warehouse.csproj --configuration Release /p:TreatWarningsAsErrors=true
+
+      - name: Generuj SBOM
+        shell: pwsh
+        run: |
+          dotnet tool install --global Microsoft.Sbom.DotNetTool
+
+          sbom-tool generate `
+            -b .\bin\Release\net10.0-windows `
+            -bc . `
+            -pn Warehouse `
+            -pv 1.0.0 `
+            -ps "Student Developer"
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: '**/manifest.spdx.json'
