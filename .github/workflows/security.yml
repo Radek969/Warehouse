@@ -26,12 +26,17 @@ jobs:
           $out = dotnet list .\Warehouse.csproj package --vulnerable --include-transitive 2>&1
           Write-Output $out
 
-          if ($out -match "vulnerable packages") {
+          if ($out -match "has no vulnerable packages") {
+              Write-Output "Brak znanych podatności."
+          }
+          elseif ($out -match "has the following vulnerable packages") {
               Write-Error "Wykryto podatne pakiety!"
+              Write-Output $out
               exit 1
           }
-
-          Write-Output "Brak znanych podatności."
+          else {
+              Write-Output $out
+          }
 
       - name: Build z analizatorem
         run: dotnet build .\Warehouse.csproj --configuration Release /p:TreatWarningsAsErrors=true
