@@ -1,5 +1,0 @@
-C:\Users\Radek\source\repos\Warehouse\Warehouse\obj\Debug\net10.0\Warehouse.csproj.AssemblyReference.cache
-C:\Users\Radek\source\repos\Warehouse\Warehouse\obj\Debug\net10.0\Warehouse.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\Radek\source\repos\Warehouse\Warehouse\obj\Debug\net10.0\Warehouse.AssemblyInfoInputs.cache
-C:\Users\Radek\source\repos\Warehouse\Warehouse\obj\Debug\net10.0\Warehouse.AssemblyInfo.cs
-C:\Users\Radek\source\repos\Warehouse\Warehouse\obj\Debug\net10.0\Warehouse.csproj.CoreCompileInputs.cache
